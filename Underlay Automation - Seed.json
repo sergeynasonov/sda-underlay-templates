@@ -1,0 +1,547 @@
+[
+  {
+    "name": "Underlay Automation - Seed",
+    "description": "",
+    "tags": [
+      {
+        "id": "b7bea040-3165-4361-b470-80f74d94a431",
+        "name": "underlay_seed"
+      }
+    ],
+    "author": "snasonov",
+    "deviceTypes": [
+      {
+        "productFamily": "Switches and Hubs",
+        "productSeries": "Cisco Catalyst 9500 Series Switches",
+        "productType": "Cisco Catalyst 9500 Switch"
+      },
+      {
+        "productFamily": "Switches and Hubs",
+        "productSeries": "Cisco Catalyst 9500 Series Switches",
+        "productType": "Cisco Catalyst C9500-32C Switch"
+      },
+      {
+        "productFamily": "Switches and Hubs",
+        "productSeries": "Cisco Catalyst 9500 Series Switches",
+        "productType": "Cisco Catalyst C9500X-28C8D Switch"
+      },
+      {
+        "productFamily": "Switches and Hubs",
+        "productSeries": "Cisco Catalyst 9500 Series Switches",
+        "productType": "Cisco Catalyst C9500-24Y4C Switch"
+      },
+      {
+        "productFamily": "Switches and Hubs",
+        "productSeries": "Cisco Catalyst 9500 Series Switches",
+        "productType": "Cisco Catalyst C9500X-60L4D Switch"
+      },
+      {
+        "productFamily": "Switches and Hubs",
+        "productSeries": "Cisco Catalyst 9500 Series Switches",
+        "productType": "Cisco Catalyst C9500-32QC Switch"
+      },
+      {
+        "productFamily": "Switches and Hubs",
+        "productSeries": "Cisco Catalyst 9500 Series Switches",
+        "productType": "Cisco Catalyst C9500-48Y4C Switch"
+      }
+    ],
+    "softwareType": "IOS",
+    "softwareVariant": "XE",
+    "templateContent": "## DEFINE VARIABLES\n#set ($octets1 = $ip1.split('\\.'))\n#set ($octets2 = $ip2.split('\\.'))\n#set ($Integer = 0)\n## MACRO\n##Interface basic configuration\n#macro ( int_basicconf )\nno switchport\nno shutdown\nip ospf network point-to-point\nip ospf 1 area $area\nbfd interval 300 min_rx 300 multiplier 3\nno bfd echo\nip pim sparse-mode\ndescription UNDERLAY ROUTED UPLINK\n#end \n\n###############################\n##DHCP pool config template\n#macro ( dhcp_set )\n#set ($dhcpip = $oct4currip+2)\n!\nip dhcp pool pool.$oct3currip.$oct4currip\nnetwork $octets1[0].$octets1[1].$oct3currip.$oct4currip 255.255.255.252\ndefault-router $octets1[0].$octets1[1].$oct3currip.$intip\noption 43 ascii 5A1D;B1;K4;I$DNACip;J80;\nclass ciscopnp\naddress range $octets1[0].$octets1[1].$oct3currip.$dhcpip $octets1[0].$octets1[1].$oct3currip.$dhcpip\n#end\n###############################\n#macro ( pool_exh )\n!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!UNABLE TO ALLOCATE IP\n!!!!!!!!!!!!!!!!!!!!!!!!!!\ndescription IP ADDRESS ALLOCATION ERROR\n#end\n##\n#macro ( ip_addr )\n#set ($intip = $oct4currip+1)\nip address $octets1[0].$octets1[1].$oct3currip.$intip 255.255.255.252\n#end\n## END MACROS\n\n#if ( $Integer.parseInt($octets1[3])%4 != 0 or $Integer.parseInt($octets2[3])%4 != 0 )\n!incorrect IP1 or IP2. Please check!\n$octets1[3]\n$octets2[3]\n#else\n## MAIN BODY\n#set ($oct4currip = $Integer.parseInt($octets1[3]))\n#set ($oct3currip = $Integer.parseInt($octets1[2]))\n#if ( $primaryseed == \"1\" )\n!\n#end \n!\nip dhcp class ciscopnp\noption 60 hex 636973636f706e70\n!\n#foreach ($interface in $interfaces)\n#if ( !$interface.ipv4Address )\ndefault interface $interface.portName\ninterface $interface.portName\n#int_basicconf()\n#if ( $oct4currip >= 256 )\n#set ($oct3currip = $oct3currip+1)\n#if ( $oct3currip <= $Integer.parseInt($octets2[2]))\n#set ($oct4currip = 0)\n#if ( $oct3currip == $Integer.parseInt($octets2[2]) && $oct4currip >= $Integer.parseInt($octets2[3]) )\n#pool_exh()\n#else\n#ip_addr()\n#if ( $primaryseed == \"1\" )\n#dhcp_set()\n#end\n#set ($oct4currip = $oct4currip+4)\n#end\n#else\n#pool_exh()\n#end\n#else\n#if ( $oct3currip == $Integer.parseInt($octets2[2]) && $oct4currip >= $Integer.parseInt($octets2[3]) )\n#pool_exh()\n#else\n#ip_addr()\n#if ( $primaryseed == \"1\" )\n#dhcp_set()\n#end\n#set ($oct4currip = $oct4currip+4)\n#end #end \n#else\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!Interface $interface.portName already configured with IP address. Skip!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n#end\n#end #end",
+    "rollbackTemplateContent": "",
+    "templateParams": [
+      {
+        "parameterName": "interfaces",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": true,
+        "notParam": false,
+        "paramArray": true,
+        "instructionText": null,
+        "group": null,
+        "order": 9,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": "MULTI_SELECT",
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "{\"provider\":\"Inventory\",\"attributeToDisplay\":\"portName\",\"params\":[{\"type\":\"MANAGED_DEVICE_UUID\",\"scope\":\"RUNTIME\",\"value\":null},{\"type\":\"MANAGED_DEVICE_IP\",\"scope\":\"RUNTIME\",\"value\":null},{\"type\":\"MANAGED_DEVICE_HOSTNAME\",\"scope\":\"RUNTIME\",\"value\":null}],\"value\":null,\"source\":\"Inventory\",\"entity\":\"Interface\",\"attribute\":null,\"filterType\":\"\",\"filterValue\":\"\",\"filterByAttribute\":\"\"}",
+        "sensitiveField": false,
+        "displayName": "Interfaces"
+      },
+      {
+        "parameterName": "oct3currip",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": false,
+        "notParam": true,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 5,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "displayName": null
+      },
+      {
+        "parameterName": "area",
+        "dataType": "INTEGER",
+        "defaultValue": null,
+        "description": "OSPF Area ID for routed interfaces",
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 3,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "displayName": "OSPF Area"
+      },
+      {
+        "parameterName": "ip1",
+        "dataType": "IPADDRESS",
+        "defaultValue": null,
+        "description": "Start IP address for P2P L3 links",
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": "Needs to be divisible by 4",
+        "group": null,
+        "order": 1,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "displayName": "Start IP"
+      },
+      {
+        "parameterName": "primaryseed",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 8,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": "SINGLE_SELECT",
+          "selectionValues": {
+            "No": "0",
+            "Yes": "1"
+          },
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "displayName": "This device is a primary seed"
+      },
+      {
+        "parameterName": "DNACip",
+        "dataType": "STRING",
+        "defaultValue": "10.0.12.2",
+        "description": null,
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 7,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "displayName": "DNAC IP address"
+      },
+      {
+        "parameterName": "ip2",
+        "dataType": "IPADDRESS",
+        "defaultValue": null,
+        "description": "End IP for P2P L3 links",
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": "Needs to be divisible by 4",
+        "group": null,
+        "order": 2,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "displayName": "End IP"
+      },
+      {
+        "parameterName": "intip",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": false,
+        "notParam": true,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 6,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "displayName": null
+      },
+      {
+        "parameterName": "oct4currip",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": false,
+        "notParam": true,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 4,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "displayName": null
+      }
+    ],
+    "rollbackTemplateParams": [],
+    "composite": false,
+    "containingTemplates": [],
+    "language": "VELOCITY",
+    "promotedTemplateContent": "## DEFINE VARIABLES\n#set ($octets1 = $ip1.split('\\.'))\n#set ($octets2 = $ip2.split('\\.'))\n#set ($Integer = 0)\n## MACRO\n##Interface basic configuration\n#macro ( int_basicconf )\nno switchport\nno shutdown\nip ospf network point-to-point\nip ospf 1 area $area\nbfd interval 300 min_rx 300 multiplier 3\nno bfd echo\nip pim sparse-mode\ndescription UNDERLAY ROUTED UPLINK\n#end \n\n###############################\n##DHCP pool config template\n#macro ( dhcp_set )\n#set ($dhcpip = $oct4currip+2)\n!\nip dhcp pool pool.$oct3currip.$oct4currip\nnetwork $octets1[0].$octets1[1].$oct3currip.$oct4currip 255.255.255.252\ndefault-router $octets1[0].$octets1[1].$oct3currip.$intip\noption 43 ascii 5A1D;B1;K4;I$DNACip;J80;\nclass ciscopnp\naddress range $octets1[0].$octets1[1].$oct3currip.$dhcpip $octets1[0].$octets1[1].$oct3currip.$dhcpip\n#end\n###############################\n#macro ( pool_exh )\n!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!UNABLE TO ALLOCATE IP\n!!!!!!!!!!!!!!!!!!!!!!!!!!\ndescription IP ADDRESS ALLOCATION ERROR\n#end\n##\n#macro ( ip_addr )\n#set ($intip = $oct4currip+1)\nip address $octets1[0].$octets1[1].$oct3currip.$intip 255.255.255.252\n#end\n## END MACROS\n\n#if ( $Integer.parseInt($octets1[3])%4 != 0 or $Integer.parseInt($octets2[3])%4 != 0 )\n!incorrect IP1 or IP2. Please check!\n$octets1[3]\n$octets2[3]\n#else\n## MAIN BODY\n#set ($oct4currip = $Integer.parseInt($octets1[3]))\n#set ($oct3currip = $Integer.parseInt($octets1[2]))\n#if ( $primaryseed == \"1\" )\n!\n#end \n!\nip dhcp class ciscopnp\noption 60 hex 636973636f706e70\n!\n#foreach ($interface in $interfaces)\n#if ( !$interface.ipv4Address )\ndefault interface $interface.portName\ninterface $interface.portName\n#int_basicconf()\n#if ( $oct4currip >= 256 )\n#set ($oct3currip = $oct3currip+1)\n#if ( $oct3currip <= $Integer.parseInt($octets2[2]))\n#set ($oct4currip = 0)\n#if ( $oct3currip == $Integer.parseInt($octets2[2]) && $oct4currip >= $Integer.parseInt($octets2[3]) )\n#pool_exh()\n#else\n#ip_addr()\n#if ( $primaryseed == \"1\" )\n#dhcp_set()\n#end\n#set ($oct4currip = $oct4currip+4)\n#end\n#else\n#pool_exh()\n#end\n#else\n#if ( $oct3currip == $Integer.parseInt($octets2[2]) && $oct4currip >= $Integer.parseInt($octets2[3]) )\n#pool_exh()\n#else\n#ip_addr()\n#if ( $primaryseed == \"1\" )\n#dhcp_set()\n#end\n#set ($oct4currip = $oct4currip+4)\n#end #end \n#else\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!Interface $interface.portName already configured with IP address. Skip!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n#end\n#end #end",
+    "promotedTemplateParams": [
+      {
+        "parameterName": "primaryseed",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 8,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": "SINGLE_SELECT",
+          "selectionValues": {
+            "No": "0",
+            "Yes": "1"
+          },
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": "This device is a primary seed"
+      },
+      {
+        "parameterName": "oct4currip",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": false,
+        "notParam": true,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 4,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": null
+      },
+      {
+        "parameterName": "area",
+        "dataType": "INTEGER",
+        "defaultValue": null,
+        "description": "OSPF Area ID for routed interfaces",
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 3,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": "OSPF Area"
+      },
+      {
+        "parameterName": "intip",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": false,
+        "notParam": true,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 6,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": null
+      },
+      {
+        "parameterName": "ip2",
+        "dataType": "IPADDRESS",
+        "defaultValue": null,
+        "description": "End IP for P2P L3 links",
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": "Needs to be divisible by 4",
+        "group": null,
+        "order": 2,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": "End IP"
+      },
+      {
+        "parameterName": "ip1",
+        "dataType": "IPADDRESS",
+        "defaultValue": null,
+        "description": "Start IP address for P2P L3 links",
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": "Needs to be divisible by 4",
+        "group": null,
+        "order": 1,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": "Start IP"
+      },
+      {
+        "parameterName": "oct3currip",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": false,
+        "notParam": true,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 5,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": null
+      },
+      {
+        "parameterName": "DNACip",
+        "dataType": "STRING",
+        "defaultValue": "10.0.12.2",
+        "description": null,
+        "required": true,
+        "notParam": false,
+        "paramArray": false,
+        "instructionText": null,
+        "group": null,
+        "order": 7,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": null,
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": "DNAC IP address"
+      },
+      {
+        "parameterName": "interfaces",
+        "dataType": "STRING",
+        "defaultValue": null,
+        "description": null,
+        "required": true,
+        "notParam": false,
+        "paramArray": true,
+        "instructionText": null,
+        "group": null,
+        "order": 9,
+        "customOrder": 0,
+        "selection": {
+          "selectionType": "MULTI_SELECT",
+          "selectionValues": {},
+          "defaultSelectedValues": [],
+          "id": null
+        },
+        "range": [],
+        "key": null,
+        "provider": null,
+        "binding": "{\"provider\":\"Inventory\",\"attributeToDisplay\":\"portName\",\"params\":[{\"type\":\"MANAGED_DEVICE_UUID\",\"scope\":\"RUNTIME\",\"value\":null},{\"type\":\"MANAGED_DEVICE_IP\",\"scope\":\"RUNTIME\",\"value\":null},{\"type\":\"MANAGED_DEVICE_HOSTNAME\",\"scope\":\"RUNTIME\",\"value\":null}],\"value\":null,\"source\":\"Inventory\",\"entity\":\"Interface\",\"attribute\":null,\"filterType\":\"\",\"filterValue\":\"\",\"filterByAttribute\":\"\"}",
+        "sensitiveField": false,
+        "id": null,
+        "displayName": "Interfaces"
+      }
+    ],
+    "customParamsOrder": false,
+    "createTime": 1688358636145,
+    "lastUpdateTime": 1700459431887,
+    "latestVersionTime": 1700459433403,
+    "validationErrors": {
+      "templateErrors": [
+        {
+          "type": "POTENTIAL_CONFLICT",
+          "lineNumber": 62,
+          "message": "This command is reserved to be used by Cisco DNA Center"
+        }
+      ],
+      "rollbackTemplateErrors": [],
+      "templateId": "9127cd6f-717d-4b59-8328-265d9f6c0999",
+      "templateVersion": null
+    },
+    "noOfConflicts": 1,
+    "documentDatabase": false,
+    "projectAssociated": true
+  }
+]
