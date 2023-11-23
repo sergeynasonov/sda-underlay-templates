@@ -76,7 +76,7 @@ Repeat the same for secondary seed.
 8. At the next step, populate the variables:
 - Multicast RP: this is underlay anycast RP, should be either site local BN/CP loopback0 interface or centralised RP in case of SDA Transit.
 - Management IP address: this is switch Loopback0 interface IP address.
-- OSPF aread ID: this value should match the previously configured OSPF aread ID variable on distribution switches.
+- OSPF area ID: this value should match the previously configured OSPF area ID variable on distribution switches.
 
 ![](./imgs/day-0_variables.png)
 
